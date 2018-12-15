@@ -19,11 +19,12 @@ public class LockClient {
         this.address = address;
         this.port = port;
         connector = new Connector(address, port, lockMap);
+        connector.init();
     }
 
     public static LockClient newInstance(String address) {
         if (instance == null) {
-            synchronized (instance) {
+            synchronized (LockClient.class) {
                 if (instance == null) {
                     instance = new LockClient(address, DEFAULT_PORT);
                 }
@@ -35,8 +36,8 @@ public class LockClient {
     public void lock(String resource) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
         lockMap.put(resource, latch);
-        latch.await();
         connector.sendLockRequest(resource);
+        latch.await();
     }
 
     public void release(String resource) {

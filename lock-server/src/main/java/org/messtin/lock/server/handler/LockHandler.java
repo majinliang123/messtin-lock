@@ -3,6 +3,8 @@ package org.messtin.lock.server.handler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.messtin.lock.common.entity.LockRequest;
 import org.messtin.lock.common.entity.LockResponse;
 import org.messtin.lock.common.entity.ResponseCode;
@@ -22,9 +24,12 @@ import java.util.List;
  * @author majinliang
  */
 public class LockHandler extends SimpleChannelInboundHandler<LockRequest> {
+    private static final Logger logger = LogManager.getLogger(LockHandler.class);
+
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, LockRequest request) throws Exception {
         Step step = request.getStep();
+        logger.info("Accept {} request.", request);
         switch (step) {
             case Connect:
                 connectHandler(ctx, request);
@@ -56,6 +61,8 @@ public class LockHandler extends SimpleChannelInboundHandler<LockRequest> {
      */
     private void connectHandler(ChannelHandlerContext ctx, LockRequest request) {
         String sessionId = StringUtil.isNotEmpty(request.getSessionId()) ? request.getSessionId() : UUIDUtil.generate();
+
+        logger.info("Read request from sessionId={}.", sessionId);
         Channel channel = ctx.channel();
         Session session = new Session(sessionId, channel);
         boolean isDone = SessionContainer.register(session);
@@ -70,6 +77,8 @@ public class LockHandler extends SimpleChannelInboundHandler<LockRequest> {
             response.setSessionId(sessionId);
             response.setStep(Step.Connect);
         }
+
+        logger.info("Write {} to client.", response);
         channel.writeAndFlush(response);
     }
 

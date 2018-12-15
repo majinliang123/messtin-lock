@@ -12,6 +12,7 @@
         <module>lock-common</module>
         <module>lock-client</module>
         <module>lock-server</module>
+        <module>lock-example</module>
     </modules>
 
     <properties>

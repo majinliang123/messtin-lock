@@ -8,8 +8,8 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.messtin.lock.common.codec.LockDeconder;
-import org.messtin.lock.common.codec.LockEncoder;
+import org.messtin.lock.common.codec.LockEecoder;
+import org.messtin.lock.common.codec.LockDecoder;
 import org.messtin.lock.common.entity.LockRequest;
 import org.messtin.lock.common.entity.LockResponse;
 import org.messtin.lock.server.handler.LockHandler;
@@ -38,8 +38,8 @@ public final class ServerStarter {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline()
-                                    .addLast(new LockDeconder(LockRequest.class))
-                                    .addLast(new LockEncoder(LockResponse.class))
+                                    .addLast(new LockDecoder(LockRequest.class))
+                                    .addLast(new LockEecoder(LockResponse.class))
                                     .addLast(new LockHandler());
                         }
                     });

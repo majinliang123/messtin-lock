@@ -4,14 +4,13 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.messtin.lock.client.handler.LockClientHandler;
-import org.messtin.lock.common.codec.LockDeconder;
-import org.messtin.lock.common.codec.LockEncoder;
+import org.messtin.lock.common.codec.LockEecoder;
+import org.messtin.lock.common.codec.LockDecoder;
 import org.messtin.lock.common.entity.LockRequest;
 import org.messtin.lock.common.entity.LockResponse;
 import org.messtin.lock.common.entity.Step;
@@ -44,17 +43,27 @@ public class Connector {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline()
-                                    .addLast(new LockDeconder(LockResponse.class))
-                                    .addLast(new LockEncoder(LockRequest.class))
+                                    .addLast(new LockDecoder(LockResponse.class))
+                                    .addLast(new LockEecoder(LockRequest.class))
                                     .addLast(new LockClientHandler(lockMap));
                         }
                     });
             channel = b.connect(address, port).sync().channel();
+            sendConnectRequest();
         } catch (InterruptedException e) {
 
         } finally {
-            workers.shutdownGracefully();
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> workers.shutdownGracefully(), "DSync-JVM-shutdown-hook"));
+
         }
+    }
+
+    public void sendConnectRequest(){
+        LockRequest request = new LockRequest();
+        request.setResource("");
+        request.setStep(Step.Connect);
+        request.setSessionId("1");
+        channel.writeAndFlush(request);
     }
 
     public void sendLockRequest(String resource) {

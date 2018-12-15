@@ -9,6 +9,6 @@ public final class StringUtil {
         if (str.length() == 0) {
             return false;
         }
-        return false;
+        return true;
     }
 }
