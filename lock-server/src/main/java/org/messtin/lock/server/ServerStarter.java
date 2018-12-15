@@ -8,7 +8,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.messtin.lock.common.codec.LockEecoder;
+import org.messtin.lock.common.codec.LockEncoder;
 import org.messtin.lock.common.codec.LockDecoder;
 import org.messtin.lock.common.entity.LockRequest;
 import org.messtin.lock.common.entity.LockResponse;
@@ -25,8 +25,11 @@ public final class ServerStarter {
     private static final int PORT = 4043;
 
     public static void main(String[] args) throws InterruptedException {
+        logger.info("Start initialise server.");
+
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
+
         try {
             ServerBootstrap bootstrap = new ServerBootstrap()
                     .group(bossGroup, workerGroup)
@@ -39,12 +42,14 @@ public final class ServerStarter {
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline()
                                     .addLast(new LockDecoder(LockRequest.class))
-                                    .addLast(new LockEecoder(LockResponse.class))
+                                    .addLast(new LockEncoder(LockResponse.class))
                                     .addLast(new LockHandler());
                         }
                     });
+
             ChannelFuture future = bootstrap.bind(PORT).sync();
             logger.info("Server listen at: {}", PORT);
+
             future.channel().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();

@@ -12,12 +12,12 @@ import org.messtin.lock.common.util.ProtostuffUtils;
  *
  * @author majinliang
  */
-public class LockEecoder extends MessageToByteEncoder {
-    private static final Logger logger = LogManager.getLogger(LockEecoder.class);
+public class LockEncoder extends MessageToByteEncoder {
+    private static final Logger logger = LogManager.getLogger(LockEncoder.class);
 
     private Class<?> genericClass;
 
-    public LockEecoder(Class<?> genericClass) {
+    public LockEncoder(Class<?> genericClass) {
         this.genericClass = genericClass;
     }
 

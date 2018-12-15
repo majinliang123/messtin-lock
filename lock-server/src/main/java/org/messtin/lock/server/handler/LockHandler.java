@@ -29,7 +29,6 @@ public class LockHandler extends SimpleChannelInboundHandler<LockRequest> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, LockRequest request) throws Exception {
         Step step = request.getStep();
-        logger.info("Accept {} request.", request);
         switch (step) {
             case Connect:
                 connectHandler(ctx, request);
@@ -61,37 +60,42 @@ public class LockHandler extends SimpleChannelInboundHandler<LockRequest> {
      */
     private void connectHandler(ChannelHandlerContext ctx, LockRequest request) {
         String sessionId = StringUtil.isNotEmpty(request.getSessionId()) ? request.getSessionId() : UUIDUtil.generate();
+        logger.info("Handle connect request with sessionId={}.", sessionId);
 
-        logger.info("Read request from sessionId={}.", sessionId);
         Channel channel = ctx.channel();
         Session session = new Session(sessionId, channel);
         boolean isDone = SessionContainer.register(session);
 
-        LockResponse response = new LockResponse();
+        LockResponse response;
         if (isDone) {
-            response.setResponseCode(ResponseCode.OK);
-            response.setSessionId(sessionId);
-            response.setStep(Step.Connect);
+            response = buildResponse(request, ResponseCode.OK);
         } else {
-            response.setResponseCode(ResponseCode.Failed);
-            response.setSessionId(sessionId);
-            response.setStep(Step.Connect);
+            response = buildResponse(request, ResponseCode.Failed);
         }
+        response.setSessionId(sessionId);
 
-        logger.info("Write {} to client.", response);
+        logger.info("Send {} to client.", response);
         channel.writeAndFlush(response);
     }
 
+    /**
+     * When handle lock request, we will first check if the client connected to server.
+     * If not connected before, will send {@link ResponseCode} as Failed.
+     * <p>
+     * If it connected before, will try to acquire lock.
+     * If acquire lock failed, will not send client any response,
+     * so client will wait for the response until server send response when get lock resource.
+     *
+     * @param ctx
+     * @param request
+     */
     private void lockHandler(ChannelHandlerContext ctx, LockRequest request) {
         String sessionId = request.getSessionId();
         Channel channel = ctx.channel();
+        logger.info("Handle lock request with sessionId={}.", sessionId);
 
-        LockResponse response = new LockResponse();
         if (!SessionContainer.isExist(sessionId)) {
-            response.setResponseCode(ResponseCode.Failed);
-            response.setSessionId(sessionId);
-            response.setStep(Step.Lock);
-            response.setResource(request.getResource());
+            LockResponse response = buildResponse(request, ResponseCode.Failed);
             channel.writeAndFlush(response);
             return;
         }
@@ -99,48 +103,69 @@ public class LockHandler extends SimpleChannelInboundHandler<LockRequest> {
         Operator operator = new Operator(Step.Lock, channel, request.getSessionId());
         boolean isGet = LockContainer.acquire(request.getResource(), operator);
         if (isGet) {
-            response.setResponseCode(ResponseCode.OK);
-            response.setSessionId(sessionId);
-            response.setStep(Step.Lock);
-            response.setResource(request.getResource());
+            LockResponse response = buildResponse(request, ResponseCode.OK);
             channel.writeAndFlush(response);
         }
     }
 
+    /**
+     * After we unlock the resource, we will check if there are any other client wait for the resource.
+     * If existed, we need pick the head of them to send response which means get resource lock successfully.
+     *
+     * @param ctx
+     * @param request
+     */
     private void unlockHandler(ChannelHandlerContext ctx, LockRequest request) {
         String sessionId = request.getSessionId();
+        logger.info("Handle unlock request with sessionId={}.", sessionId);
+
         String resource = request.getResource();
         Operator operator = LockContainer.release(resource, sessionId);
         if (operator != null) {
             LockResponse response = new LockResponse();
             response.setResponseCode(ResponseCode.OK);
-            response.setSessionId(sessionId);
+            response.setSessionId(operator.getSessionId());
             response.setStep(Step.Lock);
             response.setResource(resource);
-            ctx.channel().writeAndFlush(response);
+            operator.getChannel().writeAndFlush(response);
         }
     }
 
+    /**
+     * When client close connection with server.
+     * 1. remove session at {@link SessionContainer}
+     * 2. remove all {@link Operator}.
+     * 3. trigger the {@link Operator} which wait for the resource.
+     *
+     * @param ctx
+     * @param request
+     */
     private void closeHandler(ChannelHandlerContext ctx, LockRequest request) {
+        SessionContainer.deregister(request.getSessionId());
+
         List<Operator> operators = LockContainer.release(request.getSessionId());
         for (Operator operator : operators) {
             if (operator != null) {
                 LockResponse response = new LockResponse();
                 response.setResponseCode(ResponseCode.OK);
                 response.setSessionId(operator.getSessionId());
-                response.setStep(Step.Lock);
-                response.setResource(null);
+                response.setStep(Step.Close);
                 ctx.channel().writeAndFlush(response);
             }
         }
     }
 
     private void defaultHandler(ChannelHandlerContext ctx, LockRequest request) {
+        LockResponse response = buildResponse(request, ResponseCode.Failed);
+        ctx.channel().writeAndFlush(response);
+    }
+
+    private LockResponse buildResponse(LockRequest request, ResponseCode resCode) {
         LockResponse response = new LockResponse();
-        response.setResponseCode(ResponseCode.Failed);
+        response.setResponseCode(resCode);
         response.setSessionId(request.getSessionId());
         response.setStep(request.getStep());
         response.setResource(request.getResource());
-        ctx.channel().writeAndFlush(response);
+        return response;
     }
 }

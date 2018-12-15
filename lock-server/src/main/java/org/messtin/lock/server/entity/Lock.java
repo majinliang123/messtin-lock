@@ -2,7 +2,6 @@ package org.messtin.lock.server.entity;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Keep the lock information.
@@ -11,24 +10,14 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class Lock {
 
-    private AtomicLong lockCounts;
     private Operator operator;
     private BlockingQueue<Operator> awaitOps;
     private String resource;
 
     public Lock(String resource, Operator operator) {
-        lockCounts = new AtomicLong(1);
         awaitOps = new LinkedBlockingQueue<>();
         this.resource = resource;
         this.operator = operator;
-    }
-
-    public AtomicLong getLockCounts() {
-        return lockCounts;
-    }
-
-    public void setLockCounts(AtomicLong lockCounts) {
-        this.lockCounts = lockCounts;
     }
 
     public Operator getOperator() {

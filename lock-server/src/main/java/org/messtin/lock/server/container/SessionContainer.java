@@ -41,11 +41,10 @@ public final class SessionContainer {
      * When the session does not exist at {@link #sessionMap},
      * will return user false to tell user we could not remove it.
      *
-     * @param session the session we want to remove.
+     * @param sessionId the sessionId we want to remove.
      * @return if we remove success.
      */
-    public static boolean deregister(Session session) {
-        String sessionId = session.getSessionId();
+    public static boolean deregister(String sessionId) {
         logger.info("Try to remove session {} from sessionMap.", sessionId);
         if (!sessionMap.containsKey(sessionId)) {
             logger.warn("{} not existed at sessionMap.", sessionId);

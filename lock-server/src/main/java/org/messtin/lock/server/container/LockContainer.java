@@ -8,7 +8,6 @@ import org.messtin.lock.server.entity.Operator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,8 +25,7 @@ public final class LockContainer {
     /**
      * When user try to lock a resource,
      * 1.the resource is never locked. Will create a new lock.
-     * 2.the resource is locked before, but the same user want to lock it again. Will add 1 to lockCounts.
-     * 3.the resource is locked by others. Will put the operator into queue to wait for the release of the resource.
+     * 3.the resource is locked. Will put the operator into queue to wait for the release of the resource.
      *
      * @param resource the resource you want to lock.
      * @param operator
@@ -44,13 +42,6 @@ public final class LockContainer {
             return true;
         }
 
-        Operator currentOp = currentLock.getOperator();
-        if (currentOp.getSessionId().equals(operator.getSessionId())) {
-            long lockCounts = currentLock.getLockCounts().incrementAndGet();
-            logger.info("Get lock for resource={} sessionId={} and lockCounts={}.", resource, operator.getSessionId(), lockCounts);
-            return true;
-        }
-
         logger.info("Did not get the lock for resource={}, will add into queue.", resource);
         currentLock.getAwaitOps().add(operator);
         return false;
@@ -58,20 +49,20 @@ public final class LockContainer {
 
     /**
      * Try to release the lock and get the head of operator queue.
+     * We will check if lock existed or if the current lock owned by the sessionId.
      *
      * @param resource  the resource we need to release.
      * @param sessionId the session id who want to release the session.
      * @return the new current operator.
      */
     public static Operator release(String resource, String sessionId) {
+        logger.info("Try to release lock for resource={} sessionId={}.", resource, sessionId);
+
         Lock currentLock = lockMap.get(resource);
         if (currentLock == null) {
             return null;
         }
         if (!currentLock.getOperator().getSessionId().equals(sessionId)) {
-            return null;
-        }
-        if (currentLock.getLockCounts().decrementAndGet() > 0) {
             return null;
         }
 
@@ -85,6 +76,12 @@ public final class LockContainer {
         }
     }
 
+    /**
+     * Will release all the {@link Operator} owned by the session id.
+     *
+     * @param sessionId
+     * @return the current operators we release, we will trigger them to get the resource.
+     */
     public static List<Operator> release(String sessionId) {
         List<Operator> operators = new ArrayList<>();
         for (Map.Entry<String, Lock> lockEntry : lockMap.entrySet()) {
@@ -96,7 +93,6 @@ public final class LockContainer {
             }
             Operator currentOp = lockEntry.getValue().getOperator();
             if (currentOp.getSessionId().equals(sessionId)) {
-                lockEntry.getValue().getLockCounts().set(1);
                 operators.add(release(lockEntry.getValue().getResource(), sessionId));
             }
         }
