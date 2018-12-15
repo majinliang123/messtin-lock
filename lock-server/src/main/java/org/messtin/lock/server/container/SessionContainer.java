@@ -1,10 +1,12 @@
 package org.messtin.lock.server.container;
 
+import io.netty.channel.Channel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.messtin.lock.server.entity.Session;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -53,6 +55,14 @@ public final class SessionContainer {
         sessionMap.remove(sessionId);
         logger.info("Removed {} from sesssionMap.", sessionId);
         return true;
+    }
+
+    public static Session get(Channel channel) {
+        Optional<Session> session = sessionMap.values()
+                .stream()
+                .filter(s -> s.getChannel().equals(channel))
+                .findFirst();
+        return session.get();
     }
 
     /**

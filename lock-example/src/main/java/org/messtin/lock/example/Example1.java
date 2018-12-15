@@ -8,7 +8,7 @@ public class Example1 {
         LockClient client = LockClient.newInstance("localhost");
         client.lock("1");
         System.out.println("2");
-//        Thread.sleep(1000*30);
+//        Thread.sleep(1000*60);
         client.release("1");
     }
 }

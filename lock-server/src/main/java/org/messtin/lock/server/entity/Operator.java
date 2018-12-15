@@ -3,8 +3,6 @@ package org.messtin.lock.server.entity;
 import io.netty.channel.Channel;
 import org.messtin.lock.common.entity.Step;
 
-import java.util.Objects;
-
 /**
  * Keep the user operator.
  *
@@ -15,11 +13,13 @@ public class Operator {
     private Step step;
     private Channel channel;
     private String sessionId;
+    private String resource;
 
-    public Operator(Step step, Channel channel, String sessionId) {
+    public Operator(Step step, Channel channel, String sessionId, String resource) {
         this.step = step;
         this.channel = channel;
         this.sessionId = sessionId;
+        this.resource = resource;
     }
 
     public Step getStep() {
@@ -46,18 +46,11 @@ public class Operator {
         this.sessionId = sessionId;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Operator operator = (Operator) o;
-        return step == operator.step &&
-                Objects.equals(channel, operator.channel) &&
-                Objects.equals(sessionId, operator.sessionId);
+    public String getResource() {
+        return resource;
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(step, channel, sessionId);
+    public void setResource(String resource) {
+        this.resource = resource;
     }
 }

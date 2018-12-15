@@ -42,7 +42,6 @@ public class LockClientHandler extends SimpleChannelInboundHandler<LockResponse>
                 break;
             case Lock:
                 String resource = response.getResource();
-                logger.info("==================================");
                 logger.info(lockMap);
                 lockMap.get(resource).poll().countDown();
                 break;

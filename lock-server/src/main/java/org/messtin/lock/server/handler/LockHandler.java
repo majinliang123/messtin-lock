@@ -47,6 +47,15 @@ public class LockHandler extends SimpleChannelInboundHandler<LockRequest> {
         }
     }
 
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+        logger.info("channelInactive:{}", ctx.channel());
+        Channel channel = ctx.channel();
+        Session session = SessionContainer.get(channel);
+        closeSession(session.getSessionId());
+    }
+
     /**
      * The connection request is：
      * 1. user first connects to server.
@@ -100,7 +109,7 @@ public class LockHandler extends SimpleChannelInboundHandler<LockRequest> {
             return;
         }
 
-        Operator operator = new Operator(Step.Lock, channel, request.getSessionId());
+        Operator operator = new Operator(Step.Lock, channel, request.getSessionId(), request.getResource());
         boolean isGet = LockContainer.acquire(request.getResource(), operator);
         if (isGet) {
             LockResponse response = buildResponse(request, ResponseCode.OK);
@@ -126,7 +135,7 @@ public class LockHandler extends SimpleChannelInboundHandler<LockRequest> {
             response.setResponseCode(ResponseCode.OK);
             response.setSessionId(operator.getSessionId());
             response.setStep(Step.Lock);
-            response.setResource(resource);
+            response.setResource(operator.getResource());
             operator.getChannel().writeAndFlush(response);
         }
     }
@@ -141,18 +150,7 @@ public class LockHandler extends SimpleChannelInboundHandler<LockRequest> {
      * @param request
      */
     private void closeHandler(ChannelHandlerContext ctx, LockRequest request) {
-        SessionContainer.deregister(request.getSessionId());
-
-        List<Operator> operators = LockContainer.release(request.getSessionId());
-        for (Operator operator : operators) {
-            if (operator != null) {
-                LockResponse response = new LockResponse();
-                response.setResponseCode(ResponseCode.OK);
-                response.setSessionId(operator.getSessionId());
-                response.setStep(Step.Close);
-                ctx.channel().writeAndFlush(response);
-            }
-        }
+        closeSession(request.getSessionId());
     }
 
     private void defaultHandler(ChannelHandlerContext ctx, LockRequest request) {
@@ -167,5 +165,20 @@ public class LockHandler extends SimpleChannelInboundHandler<LockRequest> {
         response.setStep(request.getStep());
         response.setResource(request.getResource());
         return response;
+    }
+
+    private void closeSession(String sessionId) {
+        SessionContainer.deregister(sessionId);
+        List<Operator> operators = LockContainer.release(sessionId);
+        for (Operator operator : operators) {
+            if (operator != null) {
+                LockResponse response = new LockResponse();
+                response.setResponseCode(ResponseCode.OK);
+                response.setSessionId(operator.getSessionId());
+                response.setStep(operator.getStep());
+                response.setResource(operator.getResource());
+                operator.getChannel().writeAndFlush(response);
+            }
+        }
     }
 }
