@@ -1,6 +1,5 @@
 package org.messtin.lock.common.codec;
 
-import com.dyuproject.protostuff.ProtostuffIOUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;

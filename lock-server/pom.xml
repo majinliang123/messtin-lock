@@ -11,5 +11,11 @@
 
     <artifactId>lock-server</artifactId>
 
-
+    <dependencies>
+        <dependency>
+            <artifactId>lock-common</artifactId>
+            <groupId>org.messtin</groupId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
 </project>

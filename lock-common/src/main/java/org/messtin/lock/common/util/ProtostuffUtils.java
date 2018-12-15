@@ -8,7 +8,7 @@ import com.dyuproject.protostuff.runtime.RuntimeSchema;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ProtostuffUtils {
+public final class ProtostuffUtils {
     private static volatile LinkedBuffer buffer =
             LinkedBuffer.allocate(LinkedBuffer.DEFAULT_BUFFER_SIZE);
     private static Map<Class<?>, Schema<?>> schemaCache = new ConcurrentHashMap<>();
